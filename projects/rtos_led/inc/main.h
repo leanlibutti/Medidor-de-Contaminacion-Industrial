@@ -1,7 +1,7 @@
-/* Copyright 2016, Pablo Ridolfi
+/* Copyright 2015, Pablo Ridolfi
  * All rights reserved.
  *
- * This file is part of Workspace.
+ * This file is part of lpc1769_template.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -31,24 +31,18 @@
  *
  */
 
-#ifndef _SD_SPI_H_
-#define _SD_SPI_H_
+#ifndef _MAIN_H_
+#define _MAIN_H_
+
+/** \addtogroup rtos_blink FreeRTOS blink example
+ ** @{ */
 
 /*==================[inclusions]=============================================*/
-#include "board.h"
-#include "ff.h"
-#include "string.h"
 
-/*==================[macros and definitions]=================================*/
-
-
-
-/*==================[internal data declaration]==============================*/
-
-
-/*==================[internal functions declaration]=========================*/
-
-
+#include "FreeRTOSConfig.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
 
 /*==================[cplusplus]==============================================*/
 
@@ -62,15 +56,16 @@ extern "C" {
 
 /*==================[external data declaration]==============================*/
 
+extern QueueHandle_t cola_r;
+extern QueueHandle_t cola_g;
+extern QueueHandle_t cola_b;
+
 /*==================[external functions declaration]=========================*/
-void initHardware(void);
 
-void disk_timerproc(void);
-
-void config_sd(void);
-
-void sdWrite(unsigned char * );
-
+/** @brief main function
+ * @return main function should never return
+ */
+int main(void);
 
 /*==================[cplusplus]==============================================*/
 
@@ -78,5 +73,6 @@ void sdWrite(unsigned char * );
 }
 #endif
 
+/** @} doxygen end group definition */
 /*==================[end of file]============================================*/
-#endif /* #ifndef _SD_SPI_H_ */
+#endif /* #ifndef _MAIN_H_ */

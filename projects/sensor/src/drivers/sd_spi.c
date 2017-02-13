@@ -40,6 +40,7 @@
 /*==================[internal functions definition]==========================*/
 
 #include "sd_spi.h"
+#define FILENAME "datos.txt"
 static FATFS fs;           /**< FatFs work area needed for each volume */
 static FIL fp;             /**< File object needed for each open file */
 
@@ -68,16 +69,18 @@ void sdWrite(unsigned char *cadena ){
 	uint cant_bytes;
     /* Give a work area to the default drive */
     if (f_mount(&fs, "", 0) != FR_OK) {
-    	//Board_LED_Toggle(1);
+    	Board_LED_Toggle(1);
         /* If this fails, it means that the function could
          * not register a file system object.
          * Check whether the SD card is correctly connected */
     }
+    else
+    	Board_LED_Toggle(2);
 
     cant_bytes= strlen(cadena);
 
     /* Create/open a file, then write a string and close it */
-    if (f_open(&fp, FILENAME, FA_WRITE | FA_CREATE_ALWAYS) == FR_OK) {
+    if (f_open(&fp, FILENAME, FA_WRITE | FA_OPEN_APPEND) == FR_OK) {
     	//Board_LED_Toggle(1);
         f_write(&fp, cadena, cant_bytes, &nbytes);
 

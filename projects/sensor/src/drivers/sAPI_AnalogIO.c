@@ -81,23 +81,23 @@ void analogConfig( uint8_t config ){
 		   *   - Sample rate:ADC_MAX_SAMPLE_RATE=400KHz
 		   *   - resolution: ADC_10BITS
 		   *   - burst mode: DISABLE */
-         Chip_ADC_Init( LPC_ADC0, &ADCSetup );
+         Chip_ADC_Init( LPC_ADC1, &ADCSetup );
          /* Disable burst mode */
-         Chip_ADC_SetBurstCmd( LPC_ADC0, DISABLE );
+         Chip_ADC_SetBurstCmd( LPC_ADC1, DISABLE );
          /* Set sample rate to 200KHz */
-         Chip_ADC_SetSampleRate( LPC_ADC0, &ADCSetup, ADC_MAX_SAMPLE_RATE/2 );
+         Chip_ADC_SetSampleRate( LPC_ADC1, &ADCSetup, ADC_MAX_SAMPLE_RATE/2 );
          /* Disable all channels */
-         Chip_ADC_EnableChannel( LPC_ADC0,ADC_CH1, DISABLE );
-         Chip_ADC_Int_SetChannelCmd( LPC_ADC0, ADC_CH1, DISABLE );
+         Chip_ADC_EnableChannel( LPC_ADC1,ADC_CH1, DISABLE );
+         Chip_ADC_Int_SetChannelCmd( LPC_ADC1, ADC_CH1, DISABLE );
 
-         Chip_ADC_EnableChannel( LPC_ADC0, ADC_CH2, DISABLE );
-         Chip_ADC_Int_SetChannelCmd( LPC_ADC0, ADC_CH2, DISABLE );
+         Chip_ADC_EnableChannel( LPC_ADC1, ADC_CH2, DISABLE );
+         Chip_ADC_Int_SetChannelCmd( LPC_ADC1, ADC_CH2, DISABLE );
 
-         Chip_ADC_EnableChannel( LPC_ADC0, ADC_CH3, DISABLE );
-         Chip_ADC_Int_SetChannelCmd( LPC_ADC0, ADC_CH3, DISABLE );
+         Chip_ADC_EnableChannel( LPC_ADC1, ADC_CH3, DISABLE );
+         Chip_ADC_Int_SetChannelCmd( LPC_ADC1, ADC_CH3, DISABLE );
 
-         Chip_ADC_EnableChannel( LPC_ADC0, ADC_CH4, DISABLE );
-         Chip_ADC_Int_SetChannelCmd( LPC_ADC0, ADC_CH4, DISABLE );
+         Chip_ADC_EnableChannel( LPC_ADC1, ADC_CH4, DISABLE );
+         Chip_ADC_Int_SetChannelCmd( LPC_ADC1, ADC_CH4, DISABLE );
       }
       break;
 
@@ -133,16 +133,15 @@ void analogConfig( uint8_t config ){
  */
 uint16_t analogRead( uint8_t analogInput ){
 
-   uint8_t lpcAdcChannel = 66 - analogInput;
    uint16_t analogValue = 0;
 
-   Chip_ADC_EnableChannel(LPC_ADC0, lpcAdcChannel, ENABLE);
-   Chip_ADC_SetStartMode(LPC_ADC0, ADC_START_NOW, ADC_TRIGGERMODE_RISING);
+   Chip_ADC_EnableChannel(LPC_ADC1, analogInput, ENABLE);
+   Chip_ADC_SetStartMode(LPC_ADC1, ADC_START_NOW, ADC_TRIGGERMODE_RISING);
 
-   while( (Chip_ADC_ReadStatus(LPC_ADC0, lpcAdcChannel, ADC_DR_DONE_STAT) != SET) );
-   Chip_ADC_ReadValue( LPC_ADC0, lpcAdcChannel, &analogValue );
+   while( (Chip_ADC_ReadStatus(LPC_ADC1, analogInput, ADC_DR_DONE_STAT) != SET) );
+   Chip_ADC_ReadValue( LPC_ADC1, analogInput, &analogValue );
 
-   Chip_ADC_EnableChannel( LPC_ADC0, lpcAdcChannel, DISABLE );
+   Chip_ADC_EnableChannel( LPC_ADC1, analogInput, DISABLE );
 
    return analogValue;
 }

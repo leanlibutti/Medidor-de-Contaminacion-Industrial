@@ -9,19 +9,18 @@
 
 
 /*==================[internal data declaration]==============================*/
-uint16_t medida_mq135;
-uint16_t medida_mq2;
-uint16_t medida_mq3;
-uint16_t medida_temp;
+static uint16_t ms_ticks=0;
 uint16_t umbral_mq135= 100;
 uint16_t umbral_mq2= 5000;
 uint16_t umbral_mq3= 5000;
 uint16_t umbral_temp = 25;
-uint8_t hora;
-uint8_t minutos;
-uint8_t segundos;
+uint8_t hora =0;
+uint8_t minutos=0;
+uint8_t segundos=0;
 unsigned char flag_identificador=0; //utilizado para saber que dato modificar 
 unsigned char flag_ubicacion=0; //utilizado para saber que digito del dato voy a leer
+unsigned char dato;
+uint16_t dato2;
 
 uint8_t UART0_IRQHandler(){
 	dato= uartReadByte();
@@ -33,7 +32,7 @@ uint8_t UART0_IRQHandler(){
 					flag_ubicacion ++;
 				}
 				else{
-					dato= (uint16_t) dato;
+					dato2= (uint16_t) dato;
 					hora= (dato & 0xff00) + (hora & 0x00ff);
 					flag_ubicacion--;
 					flag_identificador=0; 
@@ -46,7 +45,7 @@ uint8_t UART0_IRQHandler(){
 					flag_ubicacion ++;
 				}
 				else{
-					dato= (uint16_t) dato;
+					dato2= (uint16_t) dato;
 					minutos= (dato & 0xff00) + (minutos & 0x00ff);
 					flag_ubicacion--;
 					flag_identificador=0; 
@@ -59,7 +58,7 @@ uint8_t UART0_IRQHandler(){
 					flag_ubicacion ++;
 				}
 				else{
-					dato= (uint16_t) dato;
+					dato2= (uint16_t) dato;
 					segundos= (segundos & 0xff00) + (segundos & 0x00ff);
 					flag_ubicacion--;
 					flag_identificador=0; 
@@ -72,7 +71,7 @@ uint8_t UART0_IRQHandler(){
 					flag_ubicacion ++;
 				}
 				else{
-					dato= (uint16_t) dato;
+					dato2= (uint16_t) dato;
 					umbral_mq2= (dato & 0xff00) + (umbral_mq2 & 0x00ff);
 					flag_ubicacion--;
 					flag_identificador=0; 
@@ -85,7 +84,7 @@ uint8_t UART0_IRQHandler(){
 					flag_ubicacion ++;
 				}
 				else{
-					dato= (uint16_t) dato;
+					dato2= (uint16_t) dato;
 					umbral_mq3= (dato & 0xff00) + (umbral_mq3 & 0x00ff);
 					flag_ubicacion--;
 					flag_identificador=0; 
@@ -98,7 +97,7 @@ uint8_t UART0_IRQHandler(){
 					flag_ubicacion ++;
 				}
 				else{
-					dato= (uint16_t) dato;
+					dato2= (uint16_t) dato;
 					umbral_mq135= (dato & 0xff00) + (umbral_mq135 & 0x00ff);
 					flag_ubicacion--;
 					flag_identificador=0; 
@@ -142,25 +141,28 @@ uint8_t UART0_IRQHandler(){
 
 void SysTick_Handler(void)
 {
-	segundos ++;
-	if (segundos == 60){
-		minutos ++;
-		segundos=0;
-		if (minutos == 60){
-			hora ++;
-			minutos = 0;
-			if (hora == 24)
-				hora=0;
+	ms_ticks ++;
+	if(ms_ticks == 1000){
+		segundos ++;
+		if (segundos == 60){
+			minutos ++;
+			segundos=0;
+			if (minutos == 60){
+				hora ++;
+				minutos = 0;
+				if (hora == 24)
+					hora=0;
+			}
 		}
+		ms_ticks=0;
 	}
-	disk_timerproc();   /* Disk timer process */
 }
 
 void config_sensor(){
-	//configuracion del micro
+	//configuracion del chip
     Board_Init();
     SystemCoreClockUpdate();
-    SysTick_Config(SystemCoreClock); // configurado para que interrumpa cada 1 segundo
+    SysTick_Config(SystemCoreClock / 1000); // configurado para que interrumpa cada 1 ms
 
 	//configuracion del adc
 	analogConfig(ENABLE_ANALOG_INPUTS);
@@ -177,19 +179,23 @@ void config_sensor(){
 
 int main(){
   unsigned char hacer= 1;
+  uint16_t medida_mq135;
+  uint16_t medida_mq2;
+  uint16_t medida_mq3;
+  uint16_t medida_temp;
   config_sensor();
   while(1){
 	//leo las medidas de los 4 sensores (medida en 16 bits de tensiones)
-	medida_mq135= analogRead(AI3); //conectado al CH3 
-	medida_mq2= analogRead(AI0); //conectado al CH0
-	medida_mq3= analogRead(AI2); //conectado al CH2
-	medida_temp= analogRead(AI1); //conectado al CH1
+	medida_mq135= analogRead(ADC_CH3); //conectado al CH3
+	medida_mq2= analogRead(ADC_CH0); //conectado al CH0
+	medida_mq3= analogRead(ADC_CH2); //conectado al CH2
+	medida_temp= analogRead(ADC_CH1); //conectado al CH1
 
-	//realizar ajuste y conversion de las medidas realizadas con la medida de la temperatura
+	//realizar ajuste y conversion de las medidas realizadas con la medida de la temperatura (falta lo de calibrar con temp)
 	medida_mq2= 12.1 * medida_mq135 - 1856.8 ; // 200 a 10000 ppm
 	medida_mq135= 0.23 * medida_mq135 - 29.88; // 10 a 200 ppm
 	medida_mq3= 12.2 * medida_mq3 - 1977.78; // 100 a 10000 ppm
-	medida_temp= (medida_temp - 0.79) / 0.1; // 0 a 150 °C 
+	medida_temp= (((3.3/1023) * medida_temp)- 0.79) / 0.01; // 0 a 150 °C
 
 	//enviar medidas reales por rs485 al poncho interfaz
 	uint8_t array[2];
@@ -210,20 +216,29 @@ int main(){
 	uartWriteByte(array[1]); //envia parte alta de los 16 bits
 
 	//guardar medidas reales en la memoria sd
-	unsigned char cadena1[]= {'M','q','1','3','5',((medida_mq135/10000) + 48), (((medida_mq135 % 10000) / 1000) + 48), (((medida_mq135/100) % 100) + 48), (((medida_mq135/10) % 1000) + 48), ((medida_mq135 % 10000) + 48), '\0','\n' };
+	unsigned char cadena1[]= {'M','q','1','3','5',':', ((medida_mq135/10000) + 48), (((medida_mq135 % 10000) / 1000) + 48), (((medida_mq135%1000)/100) + 48), (((medida_mq135%100)/10)+ 48), ((medida_mq135 %10)+ 48),'p','p','m','\n', '\0'};
 	sdWrite(cadena1);
 	if (medida_mq135 > umbral_mq135){
-		sdWrite("Alarma!! MQ135 paso el umbral!!");
+		unsigned char cadena4[]= {'M','q','1','3','5',':', 'A', 'L', 'A','R','M','A','!','!',' ',' ',' ','\0'};
+		sdWrite(cadena4);
+		unsigned char cadena_h1[]= {(hora/10) + 48, (hora%10) + 48,':',(minutos/10) + 48, (minutos%10) + 48,':', (segundos/10) + 48, (segundos%10) + 48,'\n','\0'  };
+		sdWrite(cadena_h1);
 	}
-	unsigned char cadena2[]= {'M','q','2',((medida_mq2/10000) + 48), (((medida_mq2 % 10000) / 1000) + 48), (((medida_mq2/100) % 100) + 48), (((medida_mq2/10) % 1000) + 48), ((medida_mq2 % 10000) + 48), '\0','\n' };
+	unsigned char cadena2[]= {'M','q','2',':', ((medida_mq2/10000) + 48), (((medida_mq2 % 10000) / 1000) + 48), (((medida_mq2%1000)/100) + 48), (((medida_mq2%100)/10)+ 48), ((medida_mq2 %10)+ 48),'p','p','m','\n', '\0'};;
 	sdWrite(cadena2);
 	if (medida_mq2 > umbral_mq2){
-		sdWrite("Alarma!! MQ2 paso el umbral!!");
+		unsigned char cadena5[]= {'M','q','2',':', 'A', 'L', 'A','R','M','A','!','!',' ',' ',' ','\0'};
+		sdWrite(cadena5);
+		unsigned char cadena_h2[]= {(hora/10) + 48, (hora%10) + 48,':',(minutos/10) + 48, (minutos%10) + 48,':', (segundos/10) + 48, (segundos%10) + 48,'\n','\0'  };
+		sdWrite(cadena_h2);
 	}
-	unsigned char cadena3[]= {'M','q','3',((medida_mq3/10000) + 48), (((medida_mq3 % 10000) / 1000) + 48), (((medida_mq3/100) % 100) + 48), (((medida_mq3/10) % 1000) + 48), ((medida_mq3 % 10000) + 48), '\0','\n' };
+	unsigned char cadena3[]= {'M','q','3', ':', ((medida_mq3/10000) + 48), (((medida_mq3 % 10000) / 1000) + 48), (((medida_mq3%1000)/100) + 48), (((medida_mq3%100)/10)+ 48), ((medida_mq3 %10)+ 48),'p','p','m','\n', '\0'};
 	sdWrite(cadena3);
 	if (medida_mq3 > umbral_mq3){
-		sdWrite("Alarma!! MQ3 paso el umbral!!");
+		unsigned char cadena6[]= {'M','q','3',':', 'A', 'L', 'A','R','M','A','!','!',' ',' ',' ','\0'};
+		sdWrite(cadena6);
+		unsigned char cadena_h3[] = {(hora/10) + 48, (hora%10) + 48,':',(minutos/10) + 48, (minutos%10) + 48,':', (segundos/10) + 48, (segundos%10) + 48,'\n','\0' };
+		sdWrite(cadena_h3);
 	}
 	if (hacer == 2){ // mandar la medida de temperatura cada 1 segundo 
 		array[0]=medida_temp & 0xff;
